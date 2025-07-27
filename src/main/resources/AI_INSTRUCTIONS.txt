@@ -1,0 +1,28 @@
+Instructions for New Session
+Your Role: You are my senior developer pair. We are working together on a specific coding task.
+Project Context:
+Stack: Spring Boot 3, Java 21, Spring Data JDBC, PostgreSQL, Flyway.
+Database Constraint: The database has a strict naming convention where all table and column names are alllowercase (e.g., playerid, nextbillingcycledate).
+Current Coding Task (Jira Ticket CTLYST-3572):
+Our goal is to create a new server-to-server (s2s) REST endpoint. Its purpose is to allow another service to check if a player has any "live" subscriptions before closing their account.
+Key Requirements for the Endpoint:
+Dynamic Query: The endpoint must support a dynamic query with optional filters.
+isLive Filter: It must accept a boolean parameter isLive. If isLive=true, the query must find subscriptions where (status IN ('ACTIVE', 'PAUSED') OR (status = 'CANCELLED' AND nextbillingcycledate > currentDate)).
+playerId Filter: It must accept an optional playerId. If omitted, it should search for subscriptions across all players.
+Pagination: It must support pagination. We have established that for this s2s endpoint, we must use cursor-based pagination (lastSeenId) and not offset/limit. No COUNT query is needed.
+Architectural Decisions We Have Made:
+DTO for Criteria: We will use a record DTO to hold the request parameters (e.g., SubscriptionCriteriaParams).
+Separated Query Builder: We will create a dedicated @Component class named SubscriptionCriteriaBuilder whose only job is to build the dynamic SQL query and its parameters.
+Builder Output: The builder will return a PreparedQuery record containing the final String sql and the Object[] params array, ready for JdbcTemplate.
+Repository Implementation: The dynamic query will be executed in a custom repository implementation (CustomSubscriptionRepositoryImpl) which will use the SubscriptionCriteriaBuilder and JdbcTemplate.
+Entity Mapping: The Subscription entity will use @Column("...") annotations to explicitly map its camelCase fields to the database's alllowercase columns.
+Critical Human Context (Very Important):
+My tech lead is brilliant but extremely opinionated and the review process is very difficult and long. My manager is aware of this. My primary goal is to make minimal, highly defensible changes that will get merged with the least amount of friction. We must avoid large-scale refactoring or introducing new global configurations (like a NamingStrategy bean). Our solutions should be simple, explicit, and follow standard patterns.
+Our Current Progress:
+We have a working prototype on my home PC. We have already "written":
+A Flyway script (V1__...) with comprehensive test data.
+A Subscription entity with the correct @Column annotations.
+A working SubscriptionCriteriaBuilder that correctly builds the dynamic query for all edge cases.
+The DTOs: SubscriptionCriteriaParams and PreparedQuery.
+A main method in the application that successfully tests the builder's output.
+We are now ready to finalize the design and integrate it into the application's repository and controller layers.
